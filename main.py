@@ -75,14 +75,34 @@ while True:
                             item_arrastado = {'item': item, 'origem': 'casa', 'slot_idx': s_casa}
                             casa.inventario.slots[s_casa] = None
                     else:
-                        if item_arrastado['origem'] == 'casa':
-                            origem_idx = item_arrastado['slot_idx']
-                            item_destino = casa.inventario.slots[s_casa]
-                            casa.inventario.slots[origem_idx] = item_destino
-                            casa.inventario.slots[s_casa] = item_arrastado['item']
+                        item_alvo = casa.inventario.slots[s_casa]
+                        item_mov = item_arrastado['item']
+                        
+                        if item_alvo is None:
+                            sucesso = casa.inventario.adicionar_item(item_mov.tipo, item_mov.qtd, item_mov.cargas)
+                            if sucesso:
+                                item_arrastado = None
+                            else:
+                                mensagem = "Inventário da casa cheio!"
+                        elif item_alvo.tipo == item_mov.tipo and item_alvo.tipo != "regador":
+                            espaco = item_alvo.max_qtd - item_alvo.qtd
+                            if item_mov.qtd <= espaco:
+                                item_alvo.qtd += item_mov.qtd
+                                item_arrastado = None
+                            else:
+                                item_mov.qtd -= espaco
+                                item_alvo.qtd = item_alvo.max_qtd
+                                mensagem = "Slot da casa cheio! Sobrou resto."
                         else:
-                            casa.inventario.slots[s_casa] = item_arrastado['item']
-                        item_arrastado = None
+                            if item_arrastado['origem'] == 'jogador':
+                                casa.inventario.slots[s_casa] = item_mov
+                                inventario_jogador.slots[item_arrastado['slot_idx']] = item_alvo
+                                item_arrastado = None
+                            else:
+                                origem_idx = item_arrastado['slot_idx']
+                                casa.inventario.slots[origem_idx] = item_alvo
+                                casa.inventario.slots[s_casa] = item_mov
+                                item_arrastado = None
 
             elif rect_inv_jog.collidepoint(mx, my):
                 s_jog = inventario_jogador.obter_slot_por_pos(mx, my, inicio_x_jog, inicio_y_jog)
@@ -93,14 +113,34 @@ while True:
                             item_arrastado = {'item': item, 'origem': 'jogador', 'slot_idx': s_jog}
                             inventario_jogador.slots[s_jog] = None
                     else:
-                        if item_arrastado['origem'] == 'jogador':
-                            origem_idx = item_arrastado['slot_idx']
-                            item_destino = inventario_jogador.slots[s_jog]
-                            inventario_jogador.slots[origem_idx] = item_destino
-                            inventario_jogador.slots[s_jog] = item_arrastado['item']
+                        item_alvo = inventario_jogador.slots[s_jog]
+                        item_mov = item_arrastado['item']
+                        
+                        if item_alvo is None:
+                            sucesso = inventario_jogador.adicionar_item(item_mov.tipo, item_mov.qtd, item_mov.cargas)
+                            if sucesso:
+                                item_arrastado = None
+                            else:
+                                mensagem = "Inventário do jogador cheio!"
+                        elif item_alvo.tipo == item_mov.tipo and item_alvo.tipo != "regador":
+                            espaco = item_alvo.max_qtd - item_alvo.qtd
+                            if item_mov.qtd <= espaco:
+                                item_alvo.qtd += item_mov.qtd
+                                item_arrastado = None
+                            else:
+                                item_mov.qtd -= espaco
+                                item_alvo.qtd = item_alvo.max_qtd
+                                mensagem = "Slot cheio! Sobrou resto."
                         else:
-                            inventario_jogador.slots[s_jog] = item_arrastado['item']
-                        item_arrastado = None
+                            if item_arrastado['origem'] == 'casa':
+                                inventario_jogador.slots[s_jog] = item_mov
+                                casa.inventario.slots[item_arrastado['slot_idx']] = item_alvo
+                                item_arrastado = None
+                            else:
+                                origem_idx = item_arrastado['slot_idx']
+                                inventario_jogador.slots[origem_idx] = item_alvo
+                                inventario_jogador.slots[s_jog] = item_mov
+                                item_arrastado = None
             elif item_arrastado:
                 if item_arrastado['origem'] == 'jogador':
                     inventario_jogador.slots[item_arrastado['slot_idx']] = item_arrastado['item']
@@ -128,7 +168,6 @@ while True:
                     else:
                         mensagem = "Ainda é cedo para dormir!"
                 elif alcance.colliderect(poco.colisao_rect):
-                    # Encontrar regador no inventário do jogador e encher para 10 cargas
                     encontrou_regador = False
                     for item in inventario_jogador.slots:
                         if item and item.tipo == "regador":
@@ -168,7 +207,6 @@ while True:
                                 mensagem = "Semente plantada!"
                                 break
                             elif canteiro.estado == "plantado":
-                                # Tentar regar usando o regador do inventário
                                 regador_item = None
                                 for item in inventario_jogador.slots:
                                     if item and item.tipo == "regador":
