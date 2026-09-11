@@ -7,11 +7,9 @@ class Inventario:
   def __init__(self, num_slots=8):
     self.num_slots = num_slots
     self.slots = [None] * num_slots
-    # Começa com 1 semente no primeiro slot
     self.slots[0] = {"tipo": "semente", "qtd": 1}
 
   def adicionar(self, tipo, quantidade=1):
-    # Tenta juntar a slots existentes do mesmo tipo (limite de 20)
     for slot in self.slots:
       if slot and slot["tipo"] == tipo and slot["qtd"] < 20:
         espaco = 20 - slot["qtd"]
@@ -21,7 +19,6 @@ class Inventario:
         if quantidade <= 0:
           return True
 
-    # Se sobrar, procura slots vazios
     while quantidade > 0:
       slot_vazio = -1
       for i, slot in enumerate(self.slots):
@@ -29,7 +26,7 @@ class Inventario:
           slot_vazio = i
           break
       if slot_vazio == -1:
-        return False  # Inventário cheio
+        return False
 
       adicionar = min(quantidade, 20)
       self.slots[slot_vazio] = {"tipo": tipo, "qtd": adicionar}
@@ -62,7 +59,6 @@ class Inventario:
     inicio_x = (largura_tela - largura_total) // 2
     inicio_y = altura_tela - 70
 
-    # Fundo da barra de inventário
     pygame.draw.rect(
         superficie, (44, 33, 24), (0, inicio_y - 10, largura_tela, 80)
     )
@@ -74,7 +70,6 @@ class Inventario:
       sx = inicio_x + i * (slot_tamanho + slot_espacamento)
       sy = inicio_y
 
-      # Desenhar slot
       pygame.draw.rect(
           superficie,
           (60, 45, 32),
@@ -91,7 +86,6 @@ class Inventario:
 
       item = self.slots[i]
       if item:
-        # Desenhar ícone do item
         if item["tipo"] == "semente":
           pygame.draw.circle(superficie, (120, 210, 80), (sx + 20, sy + 18), 7)
           pygame.draw.rect(superficie, (80, 160, 50), (sx + 19, sy + 18, 2, 8))
@@ -103,7 +97,6 @@ class Inventario:
               [(sx + 20, sy + 8), (sx + 16, sy + 12), (sx + 24, sy + 12)],
           )
 
-        # Quantidade por baixo se > 1
         if item["qtd"] > 1:
           txt_qtd = fonte_slot.render(str(item["qtd"]), True, (255, 209, 102))
           superficie.blit(txt_qtd, (sx + 6, sy + 30))
