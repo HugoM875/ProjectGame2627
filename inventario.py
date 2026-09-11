@@ -22,11 +22,11 @@ class Inventario:
         self.slot_tamanho = 48
         self.espacamento = 8
         self.num_cols = num_cols
+        self.slot_selecionado = 0  # Índice do slot atualmente selecionado pelo jogador
 
     def adicionar_item(self, tipo, qtd=1, cargas=0):
         resto = qtd
 
-        # 1. Preencher pilhas existentes do mesmo tipo que ainda tenham espaço (< 20)
         if tipo != "regador":
             for slot in self.slots:
                 if slot and slot.tipo == tipo and slot.qtd < slot.max_qtd:
@@ -38,7 +38,6 @@ class Inventario:
                         slot.qtd += espaco_disponivel
                         resto -= espaco_disponivel
 
-        # 2. Se ainda sobrarem itens, procurar slots totalmente vazios
         while resto > 0:
             livre = -1
             for i in range(self.num_slots):
@@ -47,7 +46,7 @@ class Inventario:
                     break
             
             if livre == -1:
-                return False  # Inventário cheio
+                return False  
             
             adic = min(resto, 20) if tipo != "regador" else 1
             self.slots[livre] = Item(tipo, adic, cargas)
@@ -97,7 +96,12 @@ class Inventario:
             
             slot_rect = pygame.Rect(sx, sy, self.slot_tamanho, self.slot_tamanho)
             pygame.draw.rect(superficie, (30, 20, 10), slot_rect, border_radius=5)
-            pygame.draw.rect(superficie, (80, 60, 40), slot_rect, 1, border_radius=5)
+            
+            # Destacar slot selecionado no inventário do jogador (se aplicável)
+            if i == self.slot_selecionado and self.num_cols > 6: # Condição para distinguir barra rápida
+                pygame.draw.rect(superficie, (241, 196, 15), slot_rect, 2, border_radius=5)
+            else:
+                pygame.draw.rect(superficie, (80, 60, 40), slot_rect, 1, border_radius=5)
 
             item = self.slots[i]
             if item and item.id != item_arrastado_id:

@@ -19,7 +19,7 @@ FONTE_PEQUENA = pygame.font.SysFont("Verdana", 11, bold=True)
 fazendeiro = Fazendeiro(500, 450)
 inventario_jogador = Inventario(8, num_cols=8)
 inventario_jogador.adicionar_item("semente", 1)
-inventario_jogador.adicionar_item("regador", 1, cargas=0) # Regador vazio inicial
+inventario_jogador.adicionar_item("regador", 1, cargas=0)
 
 relogio_jogo = RelogioJogo()
 casa = Casa(LARGURA_INI)
@@ -30,7 +30,7 @@ canteiros = [Canteiro(120, 140), Canteiro(178, 140), Canteiro(236, 140)]
 bau_aberto = False
 item_arrastado = None
 
-mensagem = "Usa 'E' no poço/máquina/canteiros e 'C' perto da casa."
+mensagem = "Clica num slot para selecioná-lo. Usa 'E' para interagir."
 relogio = pygame.time.Clock()
 
 while True:
@@ -42,7 +42,6 @@ while True:
     casa.atualizar_posicao(largura_atual)
     poco.atualizar_posicao(casa)
 
-    # Posicionamento dos inventários
     slot_tam, esp = 48, 8
     
     largura_total_jog = (slot_tam * 8) + (esp * 7)
@@ -107,9 +106,11 @@ while True:
             elif rect_inv_jog.collidepoint(mx, my):
                 s_jog = inventario_jogador.obter_slot_por_pos(mx, my, inicio_x_jog, inicio_y_jog)
                 if s_jog is not None:
+                    # Selecionar o slot ao clicar (se não estiver a arrastar nada)
                     if item_arrastado is None:
-                        if inventario_jogador.slots[s_jog]:
-                            item = inventario_jogador.slots[s_jog]
+                        inventario_jogador.slot_selecionado = s_jog
+                        item = inventario_jogador.slots[s_jog]
+                        if item:
                             item_arrastado = {'item': item, 'origem': 'jogador', 'slot_idx': s_jog}
                             inventario_jogador.slots[s_jog] = None
                     else:
@@ -185,14 +186,22 @@ while True:
                             maquina_sementes.sementes_prontas = 0
                         else:
                             mensagem = "Inventário cheio!"
-                    elif inventario_jogador.remover_por_id(next((item.id for item in inventario_jogador.slots if item and item.tipo == "tomate"), None), 1):
-                        if not maquina_sementes.processando:
-                            maquina_sementes.tempo_inicio = tempo_atual
-                            maquina_sementes.processando = True
-                        maquina_sementes.fila_tomates += 1
-                        mensagem = "Tomate inserido na máquina!"
                     else:
-                        mensagem = "Não tens tomates ou sementes prontas!"
+                        # Usar especificamente o tomate do slot selecionado atualmente
+                        slot_sel = inventario_jogador.slots[inventario_jogador.slot_selecionado]
+                        if slot_sel and slot_sel.tipo == "tomate":
+                            if slot_sel.qtd > 1:
+                                slot_sel.qtd -= 1
+                            else:
+                                inventario_jogador.slots[inventario_jogador.slot_selecionado] = None
+                            
+                            if not maquina_sementes.processando:
+                                maquina_sementes.tempo_inicio = tempo_atual
+                                maquina_sementes.processando = True
+                            maquina_sementes.fila_tomates += 1
+                            mensagem = "Tomate do slot selecionado inserido na máquina!"
+                        else:
+                            mensagem = "Seleciona um slot com tomates na barra rápida!"
                 else:
                     for canteiro in canteiros:
                         if alcance.colliderect(canteiro.rect):
@@ -202,9 +211,18 @@ while True:
                                 inventario_jogador.adicionar_item("semente", 1)
                                 mensagem = "Tomate colhido!"
                                 break
-                            elif canteiro.estado == "vazio" and inventario_jogador.remover_por_id(next((item.id for item in inventario_jogador.slots if item and item.tipo == "semente"), None), 1):
-                                canteiro.estado = "plantado"
-                                mensagem = "Semente plantada!"
+                            elif canteiro.estado == "vazio":
+                                # Plantar usando o slot selecionado
+                                slot_sel = inventario_jogador.slots[inventario_jogador.slot_selecionado]
+                                if slot_sel and slot_sel.tipo == "semente":
+                                    if slot_sel.qtd > 1:
+                                        slot_sel.qtd -= 1
+                                    else:
+                                        inventario_jogador.slots[inventario_jogador.slot_selecionado] = None
+                                    canteiro.estado = "plantado"
+                                    mensagem = "Semente plantada do slot selecionado!"
+                                else:
+                                    mensagem = "Seleciona um slot com sementes na barra rápida para plantar!"
                                 break
                             elif canteiro.estado == "plantado":
                                 regador_item = None
