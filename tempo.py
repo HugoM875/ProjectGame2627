@@ -6,7 +6,6 @@ class RelogioJogo:
 
   def __init__(self):
     self.dia = 1
-    # Começa às 18:45 (18 * 60 + 45 = 1125 minutos) para testar o entardecer facilmente
     self.minutos_totais = 18 * 60 + 45
     self.acumulador_tempo = 0
 

@@ -1,7 +1,7 @@
 # main.py
 import sys
 import pygame
-from entidades import Canteiro, Casa, Fazendeiro
+from entidades import Canteiro, Casa, Fazendeiro, MaquinaSementes
 from inventario import Inventario
 from tempo import RelogioJogo
 
@@ -21,9 +21,10 @@ fazendeiro = Fazendeiro(500, 450)
 inventario = Inventario(8)
 relogio_jogo = RelogioJogo()
 casa = Casa(LARGURA_INI)
+maquina_sementes = MaquinaSementes(330, 134)
 
 canteiros = [Canteiro(120, 140), Canteiro(178, 140), Canteiro(236, 140)]
-mensagem = "Testa o entardecer (18:45)! Visita a casa à direita após as 21h."
+mensagem = "Pressiona 'E' na máquina para recolher sementes ou colocar tomates."
 relogio = pygame.time.Clock()
 
 while True:
@@ -32,7 +33,6 @@ while True:
   tempo_atual = pygame.time.get_ticks()
   largura_atual, altura_atual = TELA.get_size()
 
-  # Atualizar a posição dinâmica da casa se a janela for redimensionada
   casa.atualizar_posicao(largura_atual)
 
   for evento in pygame.event.get():
@@ -52,10 +52,24 @@ while True:
             relogio_jogo.dormir()
             mensagem = f"Bom dia! Acordaste no {relogio_jogo.obter_hora_str()}"
           else:
-            mensagem = (
-                "Ainda é cedo para dormir! Podes ir para a cama a partir das"
-                " 21:00."
-            )
+            mensagem = "Ainda é cedo para dormir! Podes ir para a cama a partir das 21:00."
+        
+        elif alcance.colliderect(maquina_sementes.rect):
+          if maquina_sementes.sementes_prontas > 0:
+            if inventario.adicionar("semente", maquina_sementes.sementes_prontas):
+              mensagem = f"Recolhiste {maquina_sementes.sementes_prontas} sementes!"
+              maquina_sementes.sementes_prontas = 0
+            else:
+              mensagem = "Inventário cheio! Não consegues recolher as sementes."
+          elif inventario.contar("tomate") > 0:
+            inventario.remover("tomate", 1)
+            if not maquina_sementes.processando:
+              maquina_sementes.tempo_inicio = tempo_atual
+              maquina_sementes.processando = True
+            maquina_sementes.fila_tomates += 1
+            mensagem = "Tomate inserido na máquina! Produz 3 sementes em 15s."
+          else:
+            mensagem = "Não tens tomates ou sementes prontas na máquina!"
         else:
           for canteiro in canteiros:
             if alcance.colliderect(canteiro.rect):
@@ -63,21 +77,20 @@ while True:
                 canteiro.estado = "vazio"
                 inventario.adicionar("tomate", 1)
                 inventario.adicionar("semente", 1)
-                mensagem = "Tomate colhido! Adicionado ao inventário com +1 semente."
+                mensagem = "Tomate colhido! +1 semente."
                 break
-              elif (
-                  canteiro.estado == "vazio"
-                  and inventario.contar("semente") > 0
-              ):
+              elif canteiro.estado == "vazio" and inventario.contar("semente") > 0:
                 inventario.remover("semente", 1)
                 canteiro.estado = "plantado"
-                mensagem = "Semente plantada! Prime 'E' para regar."
+                mensagem = "Semente plantada!"
                 break
               elif canteiro.estado == "plantado":
                 canteiro.estado = "regado"
                 canteiro.tempo_inicio = tempo_atual
-                mensagem = "Canteiro regado! Cresce em 10 segundos..."
+                mensagem = "Canteiro regado!"
                 break
+
+  maquina_sementes.atualizar(tempo_atual)
 
   teclas = pygame.key.get_pressed()
 
@@ -88,9 +101,7 @@ while True:
     fazendeiro.x -= fazendeiro.velocidade
     if fazendeiro.obter_rect().colliderect(casa.rect):
       fazendeiro.x = fazendeiro.x_antigo
-  if (
-      teclas[pygame.K_d] or teclas[pygame.K_RIGHT]
-  ) and fazendeiro.x < largura_atual - fazendeiro.largura - 20:
+  if (teclas[pygame.K_d] or teclas[pygame.K_RIGHT]) and fazendeiro.x < largura_atual - fazendeiro.largura - 20:
     fazendeiro.x += fazendeiro.velocidade
     if fazendeiro.obter_rect().colliderect(casa.rect):
       fazendeiro.x = fazendeiro.x_antigo
@@ -99,9 +110,7 @@ while True:
     fazendeiro.y -= fazendeiro.velocidade
     if fazendeiro.obter_rect().colliderect(casa.rect):
       fazendeiro.y = fazendeiro.y_antigo
-  if (
-      teclas[pygame.K_s] or teclas[pygame.K_DOWN]
-  ) and fazendeiro.y < altura_atual - fazendeiro.altura - 90:
+  if (teclas[pygame.K_s] or teclas[pygame.K_DOWN]) and fazendeiro.y < altura_atual - fazendeiro.altura - 90:
     fazendeiro.y += fazendeiro.velocidade
     if fazendeiro.obter_rect().colliderect(casa.rect):
       fazendeiro.y = fazendeiro.y_antigo
@@ -119,6 +128,7 @@ while True:
   for canteiro in canteiros:
     canteiro.desenhar(TELA, FONTE_PEQUENA, tempo_atual)
 
+  maquina_sementes.desenhar(TELA, FONTE_PEQUENA, tempo_atual)
   casa.desenhar(TELA)
   fazendeiro.desenhar(TELA)
 

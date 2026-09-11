@@ -70,7 +70,6 @@ class Fazendeiro:
 class Casa:
 
   def __init__(self, largura_tela):
-    # Coordenadas calculadas para colar à extremidade direita com margem elegante
     self.largura = 180
     self.altura = 130
     self.x = largura_tela - self.largura - 30
@@ -83,15 +82,12 @@ class Casa:
 
   def atualizar_rects(self):
     self.rect = pygame.Rect(self.x, self.y, self.largura, self.altura)
-    # Porta centrada na parte inferior da casa
     self.porta_rect = pygame.Rect(
         self.x + self.largura // 2 - 20, self.y + self.altura - 50, 40, 50
     )
 
   def desenhar(self, superficie):
     r = self.rect
-
-    # Sombra suave da casa
     sombra_surf = pygame.Surface(
         (self.largura + 10, self.altura + 10), pygame.SRCALPHA
     )
@@ -100,11 +96,9 @@ class Casa:
     )
     superficie.blit(sombra_surf, (r.x - 2, r.y - 2))
 
-    # Paredes principais (Tons de madeira aconchegantes)
     pygame.draw.rect(superficie, (205, 162, 122), r, border_radius=10)
     pygame.draw.rect(superficie, (139, 94, 60), r, 4, border_radius=10)
 
-    # Detalhe de alpendre/base em pedra
     pygame.draw.rect(
         superficie,
         (110, 110, 110),
@@ -120,7 +114,6 @@ class Casa:
         2,
     )
 
-    # Telhado detalhado (Duas águas com beiral sobressalente)
     pontos_telhado = [
         (r.x - 15, r.y),
         (r.x + r.width // 2, r.y - 65),
@@ -129,11 +122,9 @@ class Casa:
     pygame.draw.polygon(superficie, (168, 50, 50), pontos_telhado)
     pygame.draw.polygon(superficie, (115, 30, 30), pontos_telhado, 4)
 
-    # Chaminé elegante
     pygame.draw.rect(superficie, (140, 70, 50), (r.x + 25, r.y - 50, 22, 35))
     pygame.draw.rect(superficie, (100, 45, 30), (r.x + 22, r.y - 55, 28, 8))
 
-    # Janelas duplas acolhedoras com cruz e moldura
     def desenhar_janela(jx, jy):
       pygame.draw.rect(
           superficie, (80, 50, 30), (jx - 3, jy - 3, 36, 36), border_radius=4
@@ -151,16 +142,73 @@ class Casa:
     desenhar_janela(r.x + 20, r.y + 25)
     desenhar_janela(r.x + r.width - 50, r.y + 25)
 
-    # Porta de madeira rica com puxador
     pygame.draw.rect(
-        superficie, (92, 53, 29), self.porta_rect, border_top_left_radius=6, border_top_right_radius=6
+        superficie,
+        (92, 53, 29),
+        self.porta_rect,
+        border_top_left_radius=6,
+        border_top_right_radius=6,
     )
     pygame.draw.rect(
-        superficie, (60, 32, 16), self.porta_rect, 3, border_top_left_radius=6, border_top_right_radius=6
+        superficie,
+        (60, 32, 16),
+        self.porta_rect,
+        3,
+        border_top_left_radius=6,
+        border_top_right_radius=6,
     )
     pygame.draw.circle(
         superficie, (230, 200, 100), (self.porta_rect.x + 30, self.porta_rect.y + 25), 4
     )
+
+
+class MaquinaSementes:
+
+  def __init__(self, x, y):
+    self.rect = pygame.Rect(x, y, 60, 70)
+    self.fila_tomates = 0
+    self.sementes_prontas = 0
+    self.tempo_inicio = 0
+    self.processando = False
+
+  def atualizar(self, tempo_atual):
+    if self.processando and self.fila_tomates > 0:
+      if (tempo_atual - self.tempo_inicio) / 1000 >= 15:
+        self.fila_tomates -= 1
+        self.sementes_prontas += 3
+        if self.fila_tomates > 0:
+          self.tempo_inicio = tempo_atual
+        else:
+          self.processando = False
+
+  def desenhar(self, superficie, fonte_pequena, tempo_atual):
+    r = self.rect
+    pygame.draw.rect(superficie, (120, 130, 140), r, border_radius=8)
+    pygame.draw.rect(superficie, (80, 90, 100), r, 3, border_radius=8)
+    
+    pygame.draw.polygon(
+        superficie,
+        (160, 170, 180),
+        [(r.x + 10, r.y), (r.x + r.width - 10, r.y), (r.x + r.width - 20, r.y - 12), (r.x + 20, r.y - 12)],
+    )
+    
+    visor = pygame.Rect(r.x + 12, r.y + 12, r.width - 24, 25)
+    pygame.draw.rect(superficie, (40, 50, 60), visor, border_radius=4)
+    
+    if self.sementes_prontas > 0:
+      txt_prontas = fonte_pequena.render(f"Prontas:{self.sementes_prontas}", True, (46, 204, 113))
+      superficie.blit(txt_prontas, (visor.x + 2, visor.y + 5))
+    elif self.fila_tomates > 0:
+      txt_fila = fonte_pequena.render(f"Fila: {self.fila_tomates}", True, (231, 76, 60))
+      superficie.blit(txt_fila, (visor.x + 4, visor.y + 5))
+
+    cor_luz = (46, 204, 113) if self.processando else (150, 50, 50)
+    pygame.draw.circle(superficie, cor_luz, (r.x + r.width // 2, r.y + 55), 5)
+
+    if self.processando:
+      seg_restantes = max(0, int(15 - (tempo_atual - self.tempo_inicio) / 1000))
+      txt_tempo = fonte_pequena.render(f"{seg_restantes}s", True, (255, 209, 102))
+      superficie.blit(txt_tempo, (r.x + 15, r.y + 45))
 
 
 class Canteiro:
