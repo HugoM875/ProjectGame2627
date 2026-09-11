@@ -1,7 +1,7 @@
 # main.py
 import sys
 import pygame
-from entidades import Canteiro, Casa, Fazendeiro, MaquinaSementes
+from entidades import Canteiro, Casa, Fazendeiro, MaquinaSementes, Poco
 from inventario import Inventario
 from tempo import RelogioJogo
 
@@ -19,16 +19,18 @@ FONTE_PEQUENA = pygame.font.SysFont("Verdana", 11, bold=True)
 fazendeiro = Fazendeiro(500, 450)
 inventario_jogador = Inventario(8, num_cols=8)
 inventario_jogador.adicionar_item("semente", 1)
+inventario_jogador.adicionar_item("regador", 1, cargas=0) # Regador vazio inicial
 
 relogio_jogo = RelogioJogo()
 casa = Casa(LARGURA_INI)
+poco = Poco(casa)
 maquina_sementes = MaquinaSementes(330, 134)
 canteiros = [Canteiro(120, 140), Canteiro(178, 140), Canteiro(236, 140)]
 
 bau_aberto = False
 item_arrastado = None
 
-mensagem = "Usa 'E' nos canteiros/máquina e 'C' perto da casa para abrir o baú."
+mensagem = "Usa 'E' no poço/máquina/canteiros e 'C' perto da casa."
 relogio = pygame.time.Clock()
 
 while True:
@@ -38,6 +40,7 @@ while True:
     largura_atual, altura_atual = TELA.get_size()
 
     casa.atualizar_posicao(largura_atual)
+    poco.atualizar_posicao(casa)
 
     # Posicionamento dos inventários
     slot_tam, esp = 48, 8
@@ -124,6 +127,18 @@ while True:
                         mensagem = f"Bom dia! {relogio_jogo.obter_hora_str()}"
                     else:
                         mensagem = "Ainda é cedo para dormir!"
+                elif alcance.colliderect(poco.colisao_rect):
+                    # Encontrar regador no inventário do jogador e encher para 10 cargas
+                    encontrou_regador = False
+                    for item in inventario_jogador.slots:
+                        if item and item.tipo == "regador":
+                            item.cargas = 10
+                            encontrou_regador = True
+                            break
+                    if encontrou_regador:
+                        mensagem = "Regador cheio com água (10 cargas)!"
+                    else:
+                        mensagem = "Não tens nenhum regador no inventário!"
                 elif alcance.colliderect(maquina_sementes.rect):
                     if maquina_sementes.sementes_prontas > 0:
                         if inventario_jogador.adicionar_item("semente", maquina_sementes.sementes_prontas):
@@ -153,9 +168,22 @@ while True:
                                 mensagem = "Semente plantada!"
                                 break
                             elif canteiro.estado == "plantado":
-                                canteiro.estado = "regado"
-                                canteiro.tempo_inicio = tempo_atual
-                                mensagem = "Canteiro regado!"
+                                # Tentar regar usando o regador do inventário
+                                regador_item = None
+                                for item in inventario_jogador.slots:
+                                    if item and item.tipo == "regador":
+                                        regador_item = item
+                                        break
+                                
+                                if regador_item and regador_item.cargas > 0:
+                                    regador_item.cargas -= 1
+                                    canteiro.estado = "regado"
+                                    canteiro.tempo_inicio = tempo_atual
+                                    mensagem = f"Canteiro regado! Cargas restantes: {regador_item.cargas}"
+                                elif regador_item and regador_item.cargas == 0:
+                                    mensagem = "O regador está vazio! Vai ao poço enchê-lo."
+                                else:
+                                    mensagem = "Precisas de um regador para regar!"
                                 break
 
     maquina_sementes.atualizar(tempo_atual)
@@ -166,16 +194,20 @@ while True:
 
     if (teclas[pygame.K_a] or teclas[pygame.K_LEFT]) and fazendeiro.x > 20:
         fazendeiro.x -= fazendeiro.velocidade
-        if fazendeiro.obter_rect().colliderect(casa.colisao_rect): fazendeiro.x = fazendeiro.x_antigo
+        if fazendeiro.obter_rect().colliderect(casa.colisao_rect) or fazendeiro.obter_rect().colliderect(poco.colisao_rect): 
+            fazendeiro.x = fazendeiro.x_antigo
     if (teclas[pygame.K_d] or teclas[pygame.K_RIGHT]) and fazendeiro.x < largura_atual - fazendeiro.largura - 20:
         fazendeiro.x += fazendeiro.velocidade
-        if fazendeiro.obter_rect().colliderect(casa.colisao_rect): fazendeiro.x = fazendeiro.x_antigo
+        if fazendeiro.obter_rect().colliderect(casa.colisao_rect) or fazendeiro.obter_rect().colliderect(poco.colisao_rect): 
+            fazendeiro.x = fazendeiro.x_antigo
     if (teclas[pygame.K_w] or teclas[pygame.K_UP]) and fazendeiro.y > 30:
         fazendeiro.y -= fazendeiro.velocidade
-        if fazendeiro.obter_rect().colliderect(casa.colisao_rect): fazendeiro.y = fazendeiro.y_antigo
+        if fazendeiro.obter_rect().colliderect(casa.colisao_rect) or fazendeiro.obter_rect().colliderect(poco.colisao_rect): 
+            fazendeiro.y = fazendeiro.y_antigo
     if (teclas[pygame.K_s] or teclas[pygame.K_DOWN]) and fazendeiro.y < altura_atual - fazendeiro.altura - 90:
         fazendeiro.y += fazendeiro.velocidade
-        if fazendeiro.obter_rect().colliderect(casa.colisao_rect): fazendeiro.y = fazendeiro.y_antigo
+        if fazendeiro.obter_rect().colliderect(casa.colisao_rect) or fazendeiro.obter_rect().colliderect(poco.colisao_rect): 
+            fazendeiro.y = fazendeiro.y_antigo
 
     for canteiro in canteiros:
         if canteiro.atualizar(tempo_atual):
@@ -192,6 +224,7 @@ while True:
 
     maquina_sementes.desenhar(TELA, FONTE_PEQUENA, tempo_atual)
     casa.desenhar(TELA)
+    poco.desenhar(TELA)
     fazendeiro.desenhar(TELA)
 
     if relogio_jogo.obter_nivel_escuridao() > 0:

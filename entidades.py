@@ -34,7 +34,7 @@ class Casa:
         self.altura = 130
         self.x = largura_tela - self.largura - 30
         self.y = 70
-        self.inventario = Inventario(30)  # 30 slots (5 linhas x 6 colunas)
+        self.inventario = Inventario(30)
         self.inventario.adicionar_item("tomate", 5)
         self.atualizar_rects()
 
@@ -71,6 +71,49 @@ class Casa:
         pygame.draw.rect(superficie, (92, 53, 29), self.porta_rect, border_top_left_radius=6, border_top_right_radius=6)
         pygame.draw.rect(superficie, (60, 32, 16), self.porta_rect, 3, border_top_left_radius=6, border_top_right_radius=6)
         pygame.draw.circle(superficie, (230, 200, 100), (self.porta_rect.x + 30, self.porta_rect.y + 25), 4)
+
+class Poco:
+    def __init__(self, casa_obj):
+        self.largura = 56
+        self.altura = 64
+        self.atualizar_posicao(casa_obj)
+
+    def atualizar_posicao(self, casa_obj):
+        # Coloca o poço logo à esquerda da casa
+        self.x = casa_obj.x - self.largura - 25
+        self.y = casa_obj.y + casa_obj.altura - self.altura
+        self.rect = pygame.Rect(self.x, self.y, self.largura, self.altura)
+        self.colisao_rect = pygame.Rect(self.x - 5, self.y + 20, self.largura + 10, self.altura - 20)
+
+    def desenhar(self, superficie):
+        r = self.rect
+        # Sombra
+        sombra = pygame.Surface((self.largura + 6, 16), pygame.SRCALPHA)
+        pygame.draw.ellipse(sombra, (0, 0, 0, 45), (0, 0, self.largura + 6, 16))
+        superficie.blit(sombra, (r.x - 3, r.y + r.height - 8))
+
+        # Base de pedra circular/octogonal estilizada
+        pygame.draw.rect(superficie, (130, 140, 150), (r.x + 4, r.y + 24, r.width - 8, 36), border_radius=6)
+        pygame.draw.rect(superficie, (90, 100, 110), (r.x + 4, r.y + 24, r.width - 8, 36), 2, border_radius=6)
+        # Linhas de tijolos de pedra
+        pygame.draw.line(superficie, (70, 80, 90), (r.x + 12, r.y + 36), (r.x + r.width - 12, r.y + 36), 1)
+        pygame.draw.line(superficie, (70, 80, 90), (r.x + 8, r.y + 48), (r.x + r.width - 8, r.y + 48), 1)
+
+        # Água dentro do poço
+        pygame.draw.ellipse(superficie, (52, 152, 219), (r.x + 10, r.y + 26, r.width - 20, 12))
+
+        # Pilares de madeira do telhado
+        pygame.draw.rect(superficie, (100, 60, 30), (r.x + 6, r.y + 6, 6, 26))
+        pygame.draw.rect(superficie, (100, 60, 30), (r.x + r.width - 12, r.y + 6, 6, 26))
+
+        # Telhado do poço
+        p_telhado = [(r.x - 4, r.y + 8), (r.x + r.width // 2, r.y - 12), (r.x + r.width + 4, r.y + 8)]
+        pygame.draw.polygon(superficie, (168, 50, 50), p_telhado)
+        pygame.draw.polygon(superficie, (115, 30, 30), p_telhado, 2)
+
+        # Pequeno balde pendurado
+        pygame.draw.rect(superficie, (180, 180, 180), (r.x + r.width // 2 - 5, r.y + 22, 10, 12), border_radius=2)
+        pygame.draw.line(superficie, (50, 50, 50), (r.x + r.width // 2, r.y + 10), (r.x + r.width // 2, r.y + 22), 1)
 
 class MaquinaSementes:
     def __init__(self, x, y):

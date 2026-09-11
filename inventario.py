@@ -3,14 +3,15 @@ import pygame
 import uuid
 
 class Item:
-    def __init__(self, tipo, qtd=1):
+    def __init__(self, tipo, qtd=1, cargas=0):
         self.id = str(uuid.uuid4())
         self.tipo = tipo
         self.qtd = qtd
         self.max_qtd = 20
+        self.cargas = cargas # Usado especificamente para o regador (0 a 10)
 
     def copiar(self):
-        novo = Item(self.tipo, self.qtd)
+        novo = Item(self.tipo, self.qtd, self.cargas)
         novo.id = self.id
         return novo
 
@@ -20,16 +21,18 @@ class Inventario:
         self.slots = [None] * num_slots
         self.slot_tamanho = 48
         self.espacamento = 8
-        self.num_cols = num_cols  # Permite definir colunas diferentes (ex: 8 para o jogador, 6 para a casa)
+        self.num_cols = num_cols
 
-    def adicionar_item(self, tipo, qtd=1):
+    def adicionar_item(self, tipo, qtd=1, cargas=0):
         resto = qtd
-        for slot in self.slots:
-            if slot and slot.tipo == tipo and slot.qtd < slot.max_qtd:
-                pode = min(resto, slot.max_qtd - slot.qtd)
-                slot.qtd += pode
-                resto -= pode
-                if resto == 0: return True
+        # Se for um item empilhável normal
+        if tipo != "regador":
+            for slot in self.slots:
+                if slot and slot.tipo == tipo and slot.qtd < slot.max_qtd:
+                    pode = min(resto, slot.max_qtd - slot.qtd)
+                    slot.qtd += pode
+                    resto -= pode
+                    if resto == 0: return True
         while resto > 0:
             livre = -1
             for i in range(self.num_slots):
@@ -37,13 +40,16 @@ class Inventario:
                     livre = i; break
             if livre == -1: return False
             adic = min(resto, 20)
-            self.slots[livre] = Item(tipo, adic)
+            self.slots[livre] = Item(tipo, adic, cargas)
             resto -= adic
         return True
 
     def remover_por_id(self, item_id, qtd=1):
         for i in range(self.num_slots):
             if self.slots[i] and self.slots[i].id == item_id:
+                if self.slots[i].tipo == "regador":
+                    # Regadores não reduzem quantidade de pilha, mas sim cargas
+                    return True
                 if self.slots[i].qtd > qtd:
                     self.slots[i].qtd -= qtd
                 else:
@@ -91,8 +97,21 @@ class Inventario:
                 elif item.tipo == "tomate":
                     pygame.draw.circle(superficie, (231, 76, 60), (sx + 24, sy + 22), 13)
                     pygame.draw.polygon(superficie, (46, 204, 113), [(sx + 24, sy + 8), (sx + 18, sy + 14), (sx + 30, sy + 14)])
+                elif item.tipo == "regador":
+                    # Desenhar o regador
+                    cor_corpo = (52, 152, 219) if item.cargas > 0 else (120, 120, 120)
+                    pygame.draw.rect(superficie, cor_corpo, (sx + 14, sy + 20, 20, 16), border_radius=4)
+                    # Bico
+                    pygame.draw.line(superficie, (90, 90, 90), (sx + 34, sy + 24), (sx + 40, sy + 18), 3)
+                    # Pega
+                    pygame.draw.arc(superficie, (90, 90, 90), pygame.Rect(sx + 10, sy + 16, 14, 14), 0, 3.14, 2)
 
-                if item.qtd > 1:
+                    # Mostrar indicador de cargas (ex: 10/10)
+                    f = pygame.font.SysFont("Verdana", 9, bold=True)
+                    t = f.render(f"{item.cargas}/10", True, (255, 255, 255) if item.cargas > 0 else (200, 100, 100))
+                    superficie.blit(t, (sx + 4, sy + 34))
+
+                if item.tipo != "regador" and item.qtd > 1:
                     f = pygame.font.SysFont("Verdana", 10, bold=True)
                     t = f.render(str(item.qtd), True, (255, 209, 102))
                     superficie.blit(t, (sx + self.slot_tamanho - 12, sy + self.slot_tamanho - 14))
